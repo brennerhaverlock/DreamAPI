@@ -1,42 +1,44 @@
-require('dotenv').config();
-
-const express = require('express');
-var cookieParser = require('cookie-parser');
-const jwt = require('jsonwebtoken');
+const express = require("express");
+const bodyParser = require("body-parser");
+const cors = require("cors");
 
 const app = express();
 
-const bodyParser = require('body-parser');
-const expressValidator = require('express-validator');
-
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
-
-app.use(expressValidator());
-app.use(cookieParser());
-
-require('./data/db');
-
-var checkAuth = (req, res, next) => {
-  console.log("Checking authentication");
-  if (typeof req.cookies.nToken === "undefined" || req.cookies.nToken === null) {
-    req.user = null;
-  } else {
-    var token = req.cookies.nToken;
-    var decodedToken = jwt.decode(token, { complete: true }) || {};
-    req.user = decodedToken.payload;
-  }
-
-  next();
+var corsOptions = {
+  origin: "http://localhost:8081"
 };
-app.use(checkAuth);
 
+app.use(cors(corsOptions));
 
-// TODO: Add each controller here, after all middleware is initialized.
+// parse requests of content-type - application/json
+app.use(bodyParser.json());
 
+// parse requests of content-type - application/x-www-form-urlencoded
+app.use(bodyParser.urlencoded({ extended: true }));
 
-app.listen(3000, () => {
-    console.log('API listening on port http://localhost:3000!');
+const db = require("./models");
+db.mongoose
+  .connect(db.url, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+  })
+  .then(() => {
+    console.log("Connected to the database!");
+  })
+  .catch(err => {
+    console.log("Cannot connect to the database!", err);
+    process.exit();
   });
 
-module.exports = app;
+// simple route
+app.get("/", (req, res) => {
+  res.json({ message: "Welcome to the application." });
+});
+
+require("./controllers/dreams")(app);
+
+// set port, listen for requests
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}.`);
+});
